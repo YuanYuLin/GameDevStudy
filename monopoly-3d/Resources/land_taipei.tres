@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="GameLandData" load_steps=2 format=3 uid="uid://u3crfx2dxdli"]
+
+[ext_resource type="Script" uid="uid://qy7vem6j2qm6" path="res://Resources/TileData/GameLandData.gd" id="1_u4rp5"]
+
+[resource]
+script = ExtResource("1_u4rp5")
+base_price = 5000
+base_toll = 800
+tile_name = "台北車站"
+description = "交通樞紐..."
+metadata/_custom_type_script = "uid://qy7vem6j2qm6"

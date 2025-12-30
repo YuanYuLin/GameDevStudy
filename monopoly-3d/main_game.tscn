@@ -1,0 +1,60 @@
+[gd_scene load_steps=9 format=3 uid="uid://bdrsgx1413rdd"]
+
+[ext_resource type="Script" uid="uid://bs5axt6fivg52" path="res://main_game.gd" id="1_dugkq"]
+[ext_resource type="PackedScene" uid="uid://vvvd3n0431cx" path="res://map_node.tscn" id="1_yx7mw"]
+[ext_resource type="Texture2D" uid="uid://cugku6wavbvy1" path="res://icon.svg" id="2_6bm6p"]
+[ext_resource type="Script" uid="uid://b1db17xhlbqmg" path="res://camera_rig.gd" id="2_ykeeq"]
+[ext_resource type="Resource" uid="uid://u3crfx2dxdli" path="res://Resources/land_taipei.tres" id="3_f52ns"]
+[ext_resource type="PackedScene" uid="uid://b2b6vyjdntoxu" path="res://Player.tscn" id="4_6bm6p"]
+[ext_resource type="Resource" uid="uid://bxxcg05u0t3if" path="res://Resources/land_kaohsiung.tres" id="5_l5ukw"]
+
+[sub_resource type="Environment" id="Environment_ykeeq"]
+background_mode = 2
+
+[node name="MainGame" type="Node3D" node_paths=PackedStringArray("player", "start_node")]
+script = ExtResource("1_dugkq")
+player = NodePath("Player")
+start_node = NodePath("MapNode")
+
+[node name="MapNode" parent="." node_paths=PackedStringArray("next_node") instance=ExtResource("1_yx7mw")]
+data = ExtResource("3_f52ns")
+next_node = NodePath("../MapNode2")
+
+[node name="Sprite3D" type="Sprite3D" parent="MapNode"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
+axis = 1
+texture = ExtResource("2_6bm6p")
+
+[node name="MapNode2" parent="." node_paths=PackedStringArray("next_node") instance=ExtResource("1_yx7mw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+next_node = NodePath("../MapNode3")
+
+[node name="MapNode3" parent="." node_paths=PackedStringArray("next_node") instance=ExtResource("1_yx7mw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 2)
+data = ExtResource("5_l5ukw")
+next_node = NodePath("../MapNode4")
+
+[node name="MapNode4" parent="." node_paths=PackedStringArray("next_node") instance=ExtResource("1_yx7mw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+next_node = NodePath("../MapNode")
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("2_ykeeq")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 10, 10)
+projection = 1
+size = 10.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_ykeeq")
+
+[node name="Player" parent="." instance=ExtResource("4_6bm6p")]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="GameDialog" type="AcceptDialog" parent="CanvasLayer"]
+oversampling_override = 1.0
+visible = true
