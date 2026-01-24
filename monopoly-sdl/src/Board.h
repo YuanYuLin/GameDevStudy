@@ -19,6 +19,7 @@ struct Tile {
     int price;
     int rent;
     int x, y; // 螢幕像素座標
+    int w, h;
 };
 
 #endif

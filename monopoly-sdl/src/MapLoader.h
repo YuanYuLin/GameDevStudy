@@ -38,7 +38,7 @@ public:
             std::string typeStr;
             
             // 格式: ID Type Name Price Rent X Y
-            ss >> tile.id >> typeStr >> tile.name >> tile.price >> tile.rent >> tile.x >> tile.y;
+            ss >> tile.id >> typeStr >> tile.name >> tile.price >> tile.rent >> tile.x >> tile.y >> tile.w >> tile.h;
 
             tile.type = StringToTileType(typeStr);
             tiles.push_back(tile);
