@@ -1,0 +1,8 @@
+# ID Type      Name      Price Rent  X    Y
+0    START     Start     0     0     0    0
+1    PROPERTY  Road_A    100   10    40   0
+2    PROPERTY  Road_B    100   10    80   0
+3    CHANCE    Chance    0     0     120  0
+4    JAIL      Jail      0     0     160  0
+5    PROPERTY  Road_C    200   20    200  0
+6    PROPERTY  Road_D    200   20    240  0
