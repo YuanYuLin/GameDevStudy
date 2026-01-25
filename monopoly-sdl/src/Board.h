@@ -20,6 +20,7 @@ struct Tile {
     int rent;
     int x, y; // 螢幕像素座標
     int w, h;
+    int ownerId = -1;
 };
 
 #endif

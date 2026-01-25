@@ -13,6 +13,7 @@ const float MOVE_SPEED = 200.0f;
 class Player {
 public:
     int id;
+    int money; // 新增：金錢
     int currentTileIndex;   // 邏輯上的位置 (第幾格)
     float x, y;             // 視覺上的位置 (浮點數用於平滑移動)
     
@@ -22,7 +23,7 @@ public:
     int targetTileIndex;    // 當前正在前往的「下一格」
 
     Player(int _id, int startIndex, const std::vector<Tile>& map) 
-        : id(_id), currentTileIndex(startIndex), isMoving(false), stepsRemaining(0) {
+        : id(_id), money(1500), currentTileIndex(startIndex), isMoving(false), stepsRemaining(0) {
         
         // 初始化位置在起點
         if (!map.empty()) {
@@ -40,6 +41,15 @@ public:
         isMoving = true;
     }
 
+// 新增：交易功能
+    void Pay(int amount) {
+        money -= amount;
+        if (money < 0) money = 0; // 簡單處理，這裡先不做破產邏輯
+    }
+
+    void Receive(int amount) {
+        money += amount;
+    }
     // 每幀更新 (處理移動動畫)
     void Update(float deltaTime, const std::vector<Tile>& map) {
         if (!isMoving) return;
