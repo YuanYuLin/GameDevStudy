@@ -50,6 +50,17 @@ public:
         money += amount;
     }
 
+    // 瞬間移動到指定格子
+    void Teleport(int targetIndex, const std::vector<Tile>& map) {
+        if (targetIndex >= 0 && targetIndex < (int)map.size()) {
+            currentTileIndex = targetIndex;
+            x = map[targetIndex].x;
+            y = map[targetIndex].y;
+            stepsRemaining = 0;
+            isMoving = false;
+        }
+    }
+
     void Update(float deltaTime, const std::vector<Tile>& map) {
         if (!isMoving) return;
 

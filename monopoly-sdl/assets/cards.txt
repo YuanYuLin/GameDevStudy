@@ -1,0 +1,9 @@
+# Type    Value  Description
+MONEY     200    WIN_LOTTERY!_+$200
+MONEY     -100   HOSPITAL_FEE_-$100
+MONEY     50     FOUND_WALLET_+$50
+MONEY     -500   TAX_AUDIT_-$500
+MOVE      0      GO_TO_START
+MOVE      10     GO_TO_PARK
+MONEY     -200   SPEEDING_TICKET
+MONEY     100    BANK_ERROR_+$100

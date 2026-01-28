@@ -8,13 +8,15 @@
 #include "MapLoader.h"
 #include "Player.h"
 #include "TextRenderer.h"
+#include "CardSystem.h"
 
 // 遊戲狀態
 enum GameState {
     STATE_WAIT_ROLL,
     STATE_MOVING,
     STATE_WAIT_DECISION,
-    STATE_TURN_END // 新增：回合結算過渡
+    STATE_SHOW_CARD, 
+    STATE_TURN_END // 回合結算過渡
 };
 
 const int SCREEN_WIDTH = 800;
@@ -36,6 +38,15 @@ int main(int argc, char* args[]) {
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
         SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+
+    // --- 載入卡片系統 ---
+    CardSystem cardDeck;
+    if (!cardDeck.LoadCards("assets/cards.txt")) {
+        std::cerr << "Failed to load cards!" << std::endl;
+        // 這裡可以做錯誤處理，或塞幾張預設卡
+    }
+    // 暫存當前抽到的卡片，用於顯示
+    const Card* currentCard = nullptr;
 
     // 1. 載入資源
     std::vector<Tile> mapTiles = MapLoader::LoadMap("assets/map_data.txt");
@@ -108,7 +119,12 @@ int main(int argc, char* args[]) {
                             currentState = STATE_WAIT_ROLL;
                         }
                         break;
-
+                    case STATE_SHOW_CARD:
+                        if (e.key.keysym.sym == SDLK_SPACE) {
+                            currentState = STATE_TURN_END;
+                            messageLog = "TURN END.";
+                        }
+                        break;
                     default: break;
                 }
             }
@@ -144,6 +160,29 @@ int main(int argc, char* args[]) {
                         currentPlayer.Pay(tile.rent);
                         owner->Receive(tile.rent);
                     }
+                    currentState = STATE_TURN_END;
+                }
+            } else if (tile.type == TILE_CHANCE) {
+                // === 觸發機會卡 ===
+                currentCard = cardDeck.DrawRandomCard();
+                
+                if (currentCard) {
+                    messageLog = "CHANCE: " + currentCard->description;
+                    
+                    // 執行卡片效果
+                    if (currentCard->type == EFFECT_MONEY) {
+                        if (currentCard->value > 0) currentPlayer.Receive(currentCard->value);
+                        else currentPlayer.Pay(-currentCard->value); // Pay 函數只接受正數，所以要轉號
+                    }
+                    else if (currentCard->type == EFFECT_MOVE) {
+                        currentPlayer.Teleport(currentCard->value, mapTiles);
+                        // 這裡有個細節：傳送後要不要觸發新格子的事件？
+                        // 為了簡單起見，傳送後直接結束回合
+                    }
+                    
+                    currentState = STATE_SHOW_CARD; // 進入展示狀態
+                } else {
+                    messageLog = "NO CARDS LOADED!";
                     currentState = STATE_TURN_END;
                 }
             } else {
@@ -193,6 +232,35 @@ int main(int argc, char* args[]) {
         // 提示
         if (currentState == STATE_TURN_END) {
              textEngine.DrawText(renderer, 300, 300, "PRESS SPACE NEXT", 1.5f);
+        }
+
+        if (currentState == STATE_SHOW_CARD && currentCard) {
+            // 畫一個大白框當作卡片背景
+            SDL_Rect cardRect = { 200, 150, 400, 200 };
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderFillRect(renderer, &cardRect);
+            
+            // 畫黑框邊線
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderDrawRect(renderer, &cardRect);
+
+            // 顯示卡片內容
+            textEngine.DrawText(renderer, 220, 180, "CHANCE CARD!", 2.0f);
+            
+            // 為了讓描述文字清楚，我們可能需要手動換行，這裡先簡單顯示一行
+            // 注意：我們把底線替換回空白鍵顯示，看起來比較自然
+            std::string displayDesc = currentCard->description;
+            // 簡單的替換字元邏輯 (Optional)
+            for(auto& c : displayDesc) if(c == '_') c = ' ';
+
+            textEngine.DrawText(renderer, 220, 230, displayDesc, 1.5f);
+            
+            if (currentCard->type == EFFECT_MONEY) {
+                std::string valStr = (currentCard->value > 0 ? "+$" : "-$") + std::to_string(std::abs(currentCard->value));
+                textEngine.DrawText(renderer, 220, 260, valStr, 2.0f);
+            }
+            
+            textEngine.DrawText(renderer, 220, 310, "PRESS SPACE...", 1.0f);
         }
 
         SDL_RenderPresent(renderer);
