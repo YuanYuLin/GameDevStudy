@@ -80,7 +80,16 @@ else:
         geojson_data = json.load(f)
 
 # 設定繪圖
-plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei'] 
+# 建立一個字體優先順序清單
+# Matplotlib 會依序尋找，找到第一個有的就用
+plt.rcParams['font.sans-serif'] = [
+    'Microsoft JhengHei',   # Windows 優先
+    'Noto Sans CJK JP', 
+    'Noto Sans CJK TC',     # Linux 優先 (Google)
+    'WenQuanYi Micro Hei',  # Linux 備用
+    'SimHei',               # Windows 簡體備用
+    'Arial Unicode MS'      # Mac 備用
+]
 plt.rcParams['axes.unicode_minus'] = False
 fig, ax = plt.subplots(figsize=(12, 12))
 
