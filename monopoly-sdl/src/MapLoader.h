@@ -19,7 +19,7 @@ private:
     }
 
 public:
-    static std::vector<Tile> LoadMap(const std::string& filename) {
+    static std::vector<Tile> Load(const std::string& filename) {
         std::vector<Tile> tiles;
         std::ifstream file(filename);
 

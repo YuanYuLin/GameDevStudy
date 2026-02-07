@@ -23,11 +23,12 @@ public:
 
     // 新增：玩家顏色
     Uint8 r, g, b; 
+    bool isBankrupt;
 
     // 建構子新增顏色參數
     Player(int _id, int startIndex, const std::vector<Tile>& map, Uint8 _r, Uint8 _g, Uint8 _b) 
         : id(_id), money(1500), currentTileIndex(startIndex), isMoving(false), stepsRemaining(0),
-          r(_r), g(_g), b(_b) {
+          r(_r), g(_g), b(_b), isBankrupt(false) {
         
         if (!map.empty()) {
             x = map[startIndex].x;
@@ -87,6 +88,8 @@ public:
     }
 
     void Render(SDL_Renderer* renderer) {
+	if ( isBankrupt )
+		return ;
         // 為了避免兩人重疊看不見，我們可以根據 ID 微調一下顯示位置
         int offsetX = (id - 1) * 5; 
         int offsetY = (id - 1) * 5;

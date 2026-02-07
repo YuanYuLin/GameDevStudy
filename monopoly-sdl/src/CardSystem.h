@@ -32,7 +32,7 @@ private:
 
 public:
     // 載入卡片資料
-    bool LoadCards(const std::string& filename) {
+    bool Load(const std::string& filename) {
         std::ifstream file(filename);
         if (!file.is_open()) return false;
 

@@ -9,6 +9,7 @@
 #include "Player.h"
 #include "TextRenderer.h"
 #include "CardSystem.h"
+#include "Config.h"
 
 // 遊戲狀態
 enum GameState {
@@ -16,11 +17,38 @@ enum GameState {
     STATE_MOVING,
     STATE_WAIT_DECISION,
     STATE_SHOW_CARD, 
-    STATE_TURN_END // 回合結算過渡
+    STATE_TURN_END,
+    STATE_GAME_OVER
 };
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
+void HandleBankruptcy(Player& player, std::vector<Tile>& map) {
+    std::cout << "Player " << player.id << " is BANKRUPT!" << std::endl;
+    player.isBankrupt = true;
+    player.money = 0; // 歸零顯示
+
+    // 資產清算：把他的地全部變回無主地
+    // (進階規則是可以交給債主，但這裡我們先做簡單的充公)
+    for (auto& tile : map) {
+        if (tile.ownerId == player.id) {
+            tile.ownerId = -1; 
+        }
+    }
+}
+
+int CheckWinner(const std::vector<Player>& players) {
+    int aliveCount = 0;
+    int winnerId = -1;
+    
+    for (const auto& p : players) {
+        if (!p.isBankrupt) {
+            aliveCount++;
+            winnerId = p.id;
+        }
+    }
+
+    if (aliveCount <= 1) return winnerId; // 只剩一人 (或更少)，遊戲結束
+    return -1; // 遊戲繼續
+}
 
 // 輔助函數：根據 ID 查找玩家指標
 Player* GetPlayerById(std::vector<Player>& players, int id) {
@@ -30,18 +58,33 @@ Player* GetPlayerById(std::vector<Player>& players, int id) {
     return nullptr;
 }
 
+struct Color { Uint8 r, g, b; };
+const Color PLAYER_COLORS[] = {
+    {255, 50, 50},   // P1 紅
+    {50, 50, 255},   // P2 藍
+    {50, 200, 50},   // P3 綠
+    {255, 255, 50},  // P4 黃
+    {255, 128, 0},   // P5 橘
+    {200, 50, 200}   // P6 紫
+};
+
 int main(int argc, char* args[]) {
     std::srand(std::time(nullptr));
     if (SDL_Init(SDL_INIT_VIDEO) < 0) return -1;
 
+    // 必須在建立視窗之前讀取，因為需要寬高資訊
+    GameConfig config = ConfigLoader::LoadConfig("assets/settings.txt");
+    std::cout << "Config Loaded: " << config.windowWidth << "x" << config.windowHeight 
+              << ", Players: " << config.playerCount << std::endl;
+
     SDL_Window* window = SDL_CreateWindow("Monopoly Multiplayer", 
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-        SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+        config.windowWidth, config.windowHeight, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
     // --- 載入卡片系統 ---
     CardSystem cardDeck;
-    if (!cardDeck.LoadCards("assets/cards.txt")) {
+    if (!cardDeck.Load("assets/cards.txt")) {
         std::cerr << "Failed to load cards!" << std::endl;
         // 這裡可以做錯誤處理，或塞幾張預設卡
     }
@@ -49,13 +92,23 @@ int main(int argc, char* args[]) {
     const Card* currentCard = nullptr;
 
     // 1. 載入資源
-    std::vector<Tile> mapTiles = MapLoader::LoadMap("assets/map_data.txt");
+    std::vector<Tile> mapTiles = MapLoader::Load("assets/map_data.txt");
     TextRenderer textEngine(renderer, "assets/font.bmp", 8, 8);
 
     // 2. 初始化玩家 (P1 紅色, P2 藍色)
     std::vector<Player> players;
-    players.emplace_back(1, 0, mapTiles, 255, 50, 50); // ID 1
-    players.emplace_back(2, 0, mapTiles, 50, 50, 255); // ID 2
+    for (int i = 0; i < config.playerCount; i++) {
+        // 確保顏色不會超出陣列範圍
+        Color c = PLAYER_COLORS[i % 6]; 
+        
+        // 建立玩家 (ID 從 1 開始)
+        // 注意：這裡我們需要修改 Player 建構子來支援自訂初始金額
+        // 如果你的 Player 建構子還沒改，可以先傳入預設值
+        players.emplace_back(i + 1, 0, mapTiles, c.r, c.g, c.b);
+        
+        // 設定初始金額 (需要去 Player.h 把 money 設為 public 或者提供 SetMoney 方法)
+        players.back().money = config.startMoney; 
+    }
 
     // 3. 回合控制變數
     int currentPlayerIdx = 0; // 0 代表 P1, 1 代表 P2
@@ -113,8 +166,30 @@ int main(int argc, char* args[]) {
                     case STATE_TURN_END:
                         // 按任意鍵換下一位
                         if (e.key.keysym.sym == SDLK_SPACE) {
-                            // 切換到下一個玩家
-                            currentPlayerIdx = (currentPlayerIdx + 1) % players.size();
+                            // --- 檢查是否有破產發生 ---
+                            if (currentPlayer.money < 0) {
+                                HandleBankruptcy(currentPlayer, mapTiles);
+                                messageLog = "P" + std::to_string(currentPlayer.id) + " WENT BANKRUPT!";
+                            }
+
+                            // --- 檢查是否遊戲結束 ---
+                            int winnerId = CheckWinner(players);
+                            if (winnerId != -1) {
+                                currentState = STATE_GAME_OVER;
+                                messageLog = "GAME OVER! WINNER: P" + std::to_string(winnerId);
+                                break; // 跳出 switch
+                            }
+
+                            // --- 切換到下一位倖存者 ---
+                            // 使用 do-while 迴圈，跳過所有已破產的玩家
+                            int nextIdx = currentPlayerIdx;
+                            do {
+                                nextIdx = (nextIdx + 1) % players.size();
+                            } while (players[nextIdx].isBankrupt);
+
+                            currentPlayerIdx = nextIdx;
+                            
+                            // 更新狀態文字
                             messageLog = "P" + std::to_string(players[currentPlayerIdx].id) + "'S TURN";
                             currentState = STATE_WAIT_ROLL;
                         }
@@ -123,6 +198,12 @@ int main(int argc, char* args[]) {
                         if (e.key.keysym.sym == SDLK_SPACE) {
                             currentState = STATE_TURN_END;
                             messageLog = "TURN END.";
+                        }
+                        break;
+                    case STATE_GAME_OVER:
+                        // 遊戲結束後按 ESC 退出
+                        if (e.key.keysym.sym == SDLK_ESCAPE) {
+                            quit = true;
                         }
                         break;
                     default: break;
